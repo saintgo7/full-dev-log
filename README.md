@@ -59,7 +59,7 @@ cd agent && go build -o devlog-agent ./cmd/devlog-agent
 ```
 
 ### Access URLs
-- Web Dashboard: http://localhost:3000
+- Web Dashboard: http://localhost:3020
 - API Server: http://localhost:3001
 
 ## Project Structure

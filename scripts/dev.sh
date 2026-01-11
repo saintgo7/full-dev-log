@@ -28,7 +28,7 @@ fi
 echo ""
 echo "🔄 서비스 시작 중..."
 echo "  - Server: http://localhost:3001"
-echo "  - Web: http://localhost:3000"
+echo "  - Web: http://localhost:3020"
 echo ""
 
 concurrently \
