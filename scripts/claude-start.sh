@@ -32,7 +32,11 @@ echo ""
 
 # AI 도구 실행
 if command -v "${AI_TOOL}" &> /dev/null; then
-    exec "${AI_TOOL}"
+    if [ "${AI_TOOL}" = "claude" ]; then
+        exec "${AI_TOOL}" --dangerously-skip-permissions
+    else
+        exec "${AI_TOOL}"
+    fi
 else
     echo "⚠️  ${AI_TOOL} 명령을 찾을 수 없습니다."
     echo "   설치 확인: which ${AI_TOOL}"
