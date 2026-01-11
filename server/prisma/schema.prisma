@@ -1,0 +1,202 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  role         UserRole @default(member)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  agents         Agent[]
+  events         Event[]
+  notes          Note[]
+  reports        Report[]
+  projectMembers ProjectMember[]
+  sessions       Session[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  admin
+  member
+  viewer
+}
+
+// Agent model (local collectors)
+model Agent {
+  id           String      @id @default(uuid())
+  userId       String      @map("user_id")
+  name         String
+  machineId    String      @unique @map("machine_id")
+  os           String
+  apiToken     String      @unique @map("api_token")
+  status       AgentStatus @default(active)
+  lastSyncAt   DateTime?   @map("last_sync_at")
+  lastActiveAt DateTime?   @map("last_active_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events Event[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("agents")
+}
+
+enum AgentStatus {
+  active
+  inactive
+  revoked
+}
+
+// Project model
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  repoUrl     String?  @map("repo_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members ProjectMember[]
+  events  Event[]
+  reports Report[]
+
+  @@map("projects")
+}
+
+// Project membership
+model ProjectMember {
+  id        String      @id @default(uuid())
+  projectId String      @map("project_id")
+  userId    String      @map("user_id")
+  role      ProjectRole @default(member)
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+enum ProjectRole {
+  owner
+  member
+  viewer
+}
+
+// Event model (core data)
+model Event {
+  id              String    @id @default(uuid())
+  agentId         String    @map("agent_id")
+  projectId       String?   @map("project_id")
+  userId          String    @map("user_id")
+  eventType       EventType @map("event_type")
+  eventAction     String    @map("event_action")
+  title           String?
+  content         String?
+  metadata        Json      @default("{}")
+  filePath        String?   @map("file_path")
+  gitBranch       String?   @map("git_branch")
+  gitCommitHash   String?   @map("git_commit_hash")
+  localTimestamp  DateTime  @map("local_timestamp")
+  serverTimestamp DateTime  @default(now()) @map("server_timestamp")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  agent   Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([agentId])
+  @@index([projectId])
+  @@index([eventType])
+  @@index([localTimestamp])
+  @@index([serverTimestamp])
+  @@map("events")
+}
+
+enum EventType {
+  git
+  file
+  terminal
+  manual
+}
+
+// Manual notes
+model Note {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String
+  content   String
+  tags      String[] @default([])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notes")
+}
+
+// Reports
+model Report {
+  id         String       @id @default(uuid())
+  userId     String       @map("user_id")
+  projectId  String?      @map("project_id")
+  reportType ReportType   @map("report_type")
+  title      String
+  content    String
+  dateFrom   DateTime     @map("date_from")
+  dateTo     DateTime     @map("date_to")
+  status     ReportStatus @default(draft)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([projectId])
+  @@map("reports")
+}
+
+enum ReportType {
+  daily
+  weekly
+  monthly
+  custom
+}
+
+enum ReportStatus {
+  draft
+  published
+}
+
+// User sessions (for JWT refresh tokens)
+model Session {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  refreshToken String   @unique @map("refresh_token")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}

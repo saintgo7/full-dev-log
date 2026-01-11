@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: devlog-postgres
+    environment:
+      POSTGRES_USER: devlog
+      POSTGRES_PASSWORD: devlog_secret
+      POSTGRES_DB: devlog
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devlog"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: devlog-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # API Server (production)
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: devlog-server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://devlog:devlog_secret@postgres:5432/devlog
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key-change-in-production}
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    profiles:
+      - production
+
+  # Web Dashboard (production)
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: devlog-web
+    depends_on:
+      - server
+    environment:
+      NEXT_PUBLIC_API_URL: http://server:3001
+    ports:
+      - "3000:3000"
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+  redis_data:
