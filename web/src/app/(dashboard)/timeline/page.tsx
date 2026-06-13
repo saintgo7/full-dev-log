@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Header } from '@/components/layout/Header';
-import { Timeline } from '@/components/features/Timeline';
 import { SearchBar } from '@/components/features/SearchBar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { VirtualList } from '@/components/common/VirtualList';
+import { TimelineEventSkeleton } from '@/components/common/Skeleton';
+import { useInfiniteScroll } from '@/hooks/useIntersectionObserver';
+import { useDebouncedCallback } from '@/hooks/useDebounce';
+import EventCard from '@/components/features/EventCard';
 import { useEvents } from '@/hooks/useEvents';
 import type { EventType, Event } from '@/types';
 
@@ -16,6 +20,8 @@ const eventTypes: { value: EventType | 'all'; label: string }[] = [
   { value: 'terminal', label: 'Terminal' },
   { value: 'manual', label: 'Note' },
 ];
+
+const EVENT_ITEM_HEIGHT = 96; // Height of each event card in pixels
 
 export default function TimelinePage() {
   const [selectedType, setSelectedType] = useState<EventType | 'all'>('all');
@@ -30,11 +36,42 @@ export default function TimelinePage() {
 
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useEvents(filters);
 
-  const events = data?.pages.flatMap((page) => page.items) ?? [];
+  const events = useMemo(() =>
+    data?.pages.flatMap((page) => page.items) ?? [],
+    [data?.pages]
+  );
 
-  const handleSearch = (query: string) => {
+  // Debounced filter change handler
+  const handleTypeChange = useDebouncedCallback((type: EventType | 'all') => {
+    setSelectedType(type);
+    setSelectedEvent(null);
+  }, 100);
+
+  // Search handler (SearchBar already debounces)
+  const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
-  };
+    setSelectedEvent(null);
+  }, []);
+
+  // Infinite scroll hook
+  const { sentinelRef } = useInfiniteScroll({
+    onLoadMore: fetchNextPage,
+    hasNextPage: hasNextPage ?? false,
+    isLoading: isFetchingNextPage,
+    rootMargin: '200px',
+  });
+
+  // Render event item for virtual list
+  const renderEventItem = useCallback((event: Event) => (
+    <EventCard
+      event={event}
+      onSelect={setSelectedEvent}
+      isSelected={event.id === selectedEvent?.id}
+    />
+  ), [selectedEvent?.id]);
+
+  // Key extractor for virtual list
+  const keyExtractor = useCallback((event: Event) => event.id, []);
 
   return (
     <div className="h-screen flex flex-col">
@@ -47,6 +84,7 @@ export default function TimelinePage() {
             onSearch={handleSearch}
             placeholder="이벤트 검색..."
             className="w-80"
+            debounceDelay={400}
           />
 
           <div className="flex gap-2">
@@ -55,7 +93,7 @@ export default function TimelinePage() {
                 key={type.value}
                 variant={selectedType === type.value ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setSelectedType(type.value)}
+                onClick={() => handleTypeChange(type.value)}
               >
                 {type.label}
               </Button>
@@ -65,25 +103,56 @@ export default function TimelinePage() {
 
         {/* Timeline */}
         <div className="flex gap-6 h-[calc(100%-80px)]">
-          <div className="flex-1">
-            <Timeline
-              events={events}
+          <div className="flex-1 flex flex-col">
+            {/* Virtual List for Events */}
+            <VirtualList
+              items={events}
+              itemHeight={EVENT_ITEM_HEIGHT}
+              renderItem={renderEventItem}
+              keyExtractor={keyExtractor}
               isLoading={isLoading}
-              onEventSelect={setSelectedEvent}
-              selectedEventId={selectedEvent?.id}
-            />
+              loadingSkeletonCount={5}
+              emptyMessage="이벤트가 없습니다"
+              emptyComponent={
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <p className="text-muted-foreground">이벤트가 없습니다</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    에이전트를 설치하고 활동을 시작하세요
+                  </p>
+                </div>
+              }
+              className="flex-1"
+              gap={12}
+              onEndReached={fetchNextPage}
+              endReachedThreshold={300}
+              footerComponent={
+                <>
+                  {/* Infinite scroll sentinel */}
+                  <div ref={sentinelRef} className="h-1" />
 
-            {hasNextPage && (
-              <div className="mt-4 text-center">
-                <Button
-                  variant="outline"
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
-                >
-                  {isFetchingNextPage ? '로딩 중...' : '더 보기'}
-                </Button>
-              </div>
-            )}
+                  {/* Loading indicator */}
+                  {isFetchingNextPage && (
+                    <div className="py-4 space-y-3">
+                      <TimelineEventSkeleton />
+                      <TimelineEventSkeleton />
+                    </div>
+                  )}
+
+                  {/* Load more button as fallback */}
+                  {hasNextPage && !isFetchingNextPage && (
+                    <div className="py-4 text-center">
+                      <Button
+                        variant="outline"
+                        onClick={() => fetchNextPage()}
+                        disabled={isFetchingNextPage}
+                      >
+                        더 보기
+                      </Button>
+                    </div>
+                  )}
+                </>
+              }
+            />
           </div>
 
           {/* Event Detail */}

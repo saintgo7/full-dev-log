@@ -10,15 +10,25 @@ import {
   StickyNote,
   Search,
   Cpu,
+  Terminal,
+  FileText,
+  Brain,
+  Users,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
   { href: '/timeline', label: '타임라인', icon: Clock },
+  { href: '/terminal', label: '터미널', icon: Terminal },
+  { href: '/reports', label: '리포트', icon: FileText },
+  { href: '/insights', label: 'AI 인사이트', icon: Brain },
   { href: '/search', label: '검색', icon: Search },
   { href: '/projects', label: '프로젝트', icon: FolderKanban },
+  { href: '/teams', label: '팀', icon: Users },
   { href: '/notes', label: '메모', icon: StickyNote },
+  { href: '/notifications', label: '알림', icon: Bell },
   { href: '/agents', label: '에이전트', icon: Cpu },
   { href: '/settings', label: '설정', icon: Settings },
 ];
@@ -40,7 +50,7 @@ export function Sidebar() {
       <nav className="px-3">
         <ul className="space-y-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             const Icon = item.icon;
 
             return (

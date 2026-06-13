@@ -43,12 +43,13 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        // Event type colors
+        // Event type colors per DOC-5 Design System
+        // git: orange, file: violet, terminal: green, manual: blue
         event: {
-          git: '#F97316',
-          file: '#3B82F6',
-          terminal: '#10B981',
-          manual: '#8B5CF6',
+          git: '#F97316',      // orange-500
+          file: '#8B5CF6',     // violet-500
+          terminal: '#22C55E', // green-500
+          manual: '#3B82F6',   // blue-500
         },
       },
       borderRadius: {

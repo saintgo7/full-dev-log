@@ -81,6 +81,14 @@ func main() {
 		collectors = append(collectors, fileCollector)
 	}
 
+	if cfg.Collectors.Terminal.Enabled {
+		terminalCollector := collector.NewTerminalCollector(
+			&cfg.Collectors.Terminal,
+			eventHandler,
+		)
+		collectors = append(collectors, terminalCollector)
+	}
+
 	// Initialize syncer
 	syncer := sync.NewSyncer(
 		&cfg.Sync,

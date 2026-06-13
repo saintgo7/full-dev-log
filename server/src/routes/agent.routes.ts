@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import * as agentController from '../controllers/agent.controller.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, agentAuthMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createAgentSchema, updateAgentSchema } from '../schemas/agent.schema.js';
 
 const router = Router();
 
+// Agent-authenticated routes (using API token from the Go agent)
+router.post('/heartbeat', agentAuthMiddleware, agentController.heartbeat);
+
+// User-authenticated routes (using JWT from the web dashboard)
 router.use(authMiddleware);
 
 router.post('/', validate(createAgentSchema), agentController.createAgent);

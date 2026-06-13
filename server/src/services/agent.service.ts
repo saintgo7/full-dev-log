@@ -108,3 +108,75 @@ export async function deleteAgent(userId: string, agentId: string) {
 
   await prisma.agent.delete({ where: { id: agentId } });
 }
+
+/**
+ * Update agent heartbeat - called periodically by the agent to indicate it's alive
+ */
+export async function heartbeat(agentId: string) {
+  const agent = await prisma.agent.findUnique({
+    where: { id: agentId },
+  });
+
+  if (!agent) {
+    throw new NotFoundError('Agent');
+  }
+
+  const previousStatus = agent.status;
+
+  const updatedAgent = await prisma.agent.update({
+    where: { id: agentId },
+    data: {
+      lastActiveAt: new Date(),
+      status: 'active',
+    },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      userId: true,
+      lastActiveAt: true,
+    },
+  });
+
+  return {
+    ...updatedAgent,
+    statusChanged: previousStatus !== 'active',
+  };
+}
+
+/**
+ * Check and update agent statuses based on last activity
+ * Agents inactive for more than 5 minutes are marked as inactive
+ */
+export async function checkInactiveAgents() {
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+  const inactiveAgents = await prisma.agent.findMany({
+    where: {
+      status: 'active',
+      lastActiveAt: {
+        lt: fiveMinutesAgo,
+      },
+    },
+    select: {
+      id: true,
+      userId: true,
+      name: true,
+    },
+  });
+
+  if (inactiveAgents.length > 0) {
+    await prisma.agent.updateMany({
+      where: {
+        id: {
+          in: inactiveAgents.map(a => a.id),
+        },
+      },
+      data: {
+        status: 'inactive',
+      },
+    });
+  }
+
+  return inactiveAgents;
+}

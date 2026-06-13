@@ -11,10 +11,12 @@ const badgeVariants = cva(
         secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
         destructive: 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80',
         outline: 'text-foreground',
-        git: 'border-transparent bg-event-git/10 text-event-git',
-        file: 'border-transparent bg-event-file/10 text-event-file',
-        terminal: 'border-transparent bg-event-terminal/10 text-event-terminal',
-        manual: 'border-transparent bg-event-manual/10 text-event-manual',
+        // Event type badges per DOC-5 Design System
+        // git: orange, file: violet, terminal: green, manual: blue
+        git: 'border-transparent bg-orange-500/10 text-orange-600 dark:text-orange-400',
+        file: 'border-transparent bg-violet-500/10 text-violet-600 dark:text-violet-400',
+        terminal: 'border-transparent bg-green-500/10 text-green-600 dark:text-green-400',
+        manual: 'border-transparent bg-blue-500/10 text-blue-600 dark:text-blue-400',
       },
     },
     defaultVariants: {

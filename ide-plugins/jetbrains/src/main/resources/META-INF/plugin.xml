@@ -1,0 +1,118 @@
+<idea-plugin>
+    <id>com.devlog.hub</id>
+    <name>DevLog Hub</name>
+    <vendor email="support@devlog.hub" url="https://github.com/saintgo7/full-dev-log">DevLog Hub</vendor>
+
+    <description><![CDATA[
+    <h2>DevLog Hub - Development Activity Tracker</h2>
+    <p>Automatically track and sync your development activities with DevLog Hub server.</p>
+
+    <h3>Features:</h3>
+    <ul>
+        <li>Real-time file change tracking</li>
+        <li>WebSocket-based sync with DevLog Hub server</li>
+        <li>Activity insights and statistics</li>
+        <li>Configurable sync intervals</li>
+    </ul>
+
+    <h3>Usage:</h3>
+    <ol>
+        <li>Configure server URL in Settings</li>
+        <li>Click Connect in the DevLog tool window</li>
+        <li>Your activities will be automatically tracked</li>
+    </ol>
+    ]]></description>
+
+    <change-notes><![CDATA[
+    <h3>1.0.0</h3>
+    <ul>
+        <li>Initial release</li>
+        <li>File change tracking</li>
+        <li>WebSocket connection to DevLog Hub server</li>
+        <li>Tool window with activity summary</li>
+    </ul>
+    ]]></change-notes>
+
+    <!-- Product compatibility -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Application Service -->
+        <applicationService
+            serviceInterface="com.devlog.hub.services.DevLogService"
+            serviceImplementation="com.devlog.hub.services.DevLogServiceImpl"/>
+
+        <!-- Settings -->
+        <applicationService
+            serviceInterface="com.devlog.hub.settings.DevLogSettings"
+            serviceImplementation="com.devlog.hub.settings.DevLogSettings"/>
+
+        <!-- Tool Window -->
+        <toolWindow
+            id="DevLog Hub"
+            anchor="right"
+            icon="/icons/devlog.svg"
+            factoryClass="com.devlog.hub.ui.DevLogToolWindowFactory"/>
+
+        <!-- Notification Group -->
+        <notificationGroup
+            id="DevLog Hub Notifications"
+            displayType="BALLOON"
+            toolWindowId="DevLog Hub"/>
+
+        <!-- Settings Configurable -->
+        <applicationConfigurable
+            parentId="tools"
+            instance="com.devlog.hub.settings.DevLogSettingsConfigurable"
+            id="com.devlog.hub.settings"
+            displayName="DevLog Hub"/>
+    </extensions>
+
+    <applicationListeners>
+        <!-- File Change Listener -->
+        <listener
+            class="com.devlog.hub.listeners.FileChangeListener"
+            topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
+    </applicationListeners>
+
+    <actions>
+        <!-- Main Menu Actions -->
+        <group id="DevLogHub.Menu" text="DevLog Hub" description="DevLog Hub actions">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+
+            <action id="DevLogHub.Connect"
+                    class="com.devlog.hub.actions.ConnectAction"
+                    text="Connect to Server"
+                    description="Connect to DevLog Hub server"
+                    icon="AllIcons.Actions.Execute"/>
+
+            <action id="DevLogHub.Disconnect"
+                    class="com.devlog.hub.actions.DisconnectAction"
+                    text="Disconnect"
+                    description="Disconnect from DevLog Hub server"
+                    icon="AllIcons.Actions.Suspend"/>
+
+            <separator/>
+
+            <action id="DevLogHub.SyncNow"
+                    class="com.devlog.hub.actions.SyncAction"
+                    text="Sync Now"
+                    description="Manually sync pending events"
+                    icon="AllIcons.Actions.Refresh"/>
+
+            <action id="DevLogHub.ViewInsights"
+                    class="com.devlog.hub.actions.ViewInsightsAction"
+                    text="View Insights"
+                    description="Open DevLog Hub insights in browser"
+                    icon="AllIcons.General.Web"/>
+        </group>
+
+        <!-- Toolbar Actions -->
+        <group id="DevLogHub.Toolbar" text="DevLog Hub Toolbar">
+            <reference ref="DevLogHub.Connect"/>
+            <reference ref="DevLogHub.Disconnect"/>
+            <separator/>
+            <reference ref="DevLogHub.SyncNow"/>
+        </group>
+    </actions>
+</idea-plugin>

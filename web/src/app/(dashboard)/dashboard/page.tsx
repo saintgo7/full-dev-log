@@ -1,16 +1,24 @@
 'use client';
 
-import { GitCommit, FileText, Terminal, StickyNote, Activity } from 'lucide-react';
+import { GitCommit, FileText, Terminal, PenLine, Activity, ServerIcon } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { StatsCard } from '@/components/features/StatsCard';
 import { Timeline } from '@/components/features/Timeline';
+import { RealtimeEventFeed } from '@/components/realtime/RealtimeEventFeed';
+import { AgentStatusMonitor } from '@/components/realtime/AgentStatusMonitor';
 import { useEvents, useEventStats } from '@/hooks/useEvents';
+import { useAgents } from '@/hooks/useAgents';
 
 export default function DashboardPage() {
   const { data: eventsData, isLoading: eventsLoading } = useEvents({ limit: 10 });
   const { data: stats, isLoading: statsLoading } = useEventStats(7);
+  const { data: agents, isLoading: agentsLoading } = useAgents();
 
   const events = eventsData?.pages.flatMap((page) => page.items) ?? [];
+
+  // Calculate active agents count
+  const onlineAgents = agents?.filter(a => a.status === 'active').length ?? 0;
+  const totalAgents = agents?.length ?? 0;
 
   const getTypeCount = (type: string) => {
     return stats?.byType.find((t) => t.type === type)?.count ?? 0;
@@ -24,7 +32,7 @@ export default function DashboardPage() {
 
       <div className="p-6 space-y-6">
         {/* Stats Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
           <StatsCard
             title="전체 활동"
             value={totalEvents}
@@ -32,39 +40,69 @@ export default function DashboardPage() {
             icon={<Activity className="h-4 w-4" />}
           />
           <StatsCard
+            title="에이전트"
+            value={`${onlineAgents}/${totalAgents}`}
+            description="온라인/전체"
+            icon={<ServerIcon className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />}
+          />
+          <StatsCard
             title="Git 활동"
             value={getTypeCount('git')}
             description="커밋, 푸시 등"
-            icon={<GitCommit className="h-4 w-4 text-event-git" />}
+            icon={<GitCommit className="h-4 w-4 text-orange-600 dark:text-orange-400" />}
           />
           <StatsCard
             title="파일 변경"
             value={getTypeCount('file')}
             description="생성, 수정, 삭제"
-            icon={<FileText className="h-4 w-4 text-event-file" />}
+            icon={<FileText className="h-4 w-4 text-violet-600 dark:text-violet-400" />}
           />
           <StatsCard
             title="터미널"
             value={getTypeCount('terminal')}
             description="명령 실행"
-            icon={<Terminal className="h-4 w-4 text-event-terminal" />}
+            icon={<Terminal className="h-4 w-4 text-green-600 dark:text-green-400" />}
           />
           <StatsCard
             title="메모"
             value={getTypeCount('manual')}
             description="수동 기록"
-            icon={<StickyNote className="h-4 w-4 text-event-manual" />}
+            icon={<PenLine className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
           />
         </div>
 
+        {/* Agent Status Monitor */}
+        {agents && agents.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">에이전트 상태</h2>
+            <AgentStatusMonitor agents={agents} />
+          </div>
+        )}
+
+        {agentsLoading && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">에이전트 상태</h2>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-32 rounded-lg bg-muted animate-pulse" />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Recent Activity */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-3">
           <div>
             <h2 className="text-lg font-semibold mb-4">최근 활동</h2>
             <Timeline
               events={events}
               isLoading={eventsLoading}
             />
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold mb-4">실시간 피드</h2>
+            <RealtimeEventFeed />
           </div>
 
           <div>

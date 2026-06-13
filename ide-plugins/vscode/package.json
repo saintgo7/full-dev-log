@@ -1,0 +1,111 @@
+{
+  "name": "devlog-hub",
+  "displayName": "DevLog Hub",
+  "description": "Track and sync your development activity with DevLog Hub",
+  "version": "0.1.0",
+  "publisher": "devlog-hub",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "devlog.connect",
+        "title": "DevLog: Connect to Server"
+      },
+      {
+        "command": "devlog.disconnect",
+        "title": "DevLog: Disconnect from Server"
+      },
+      {
+        "command": "devlog.viewInsights",
+        "title": "DevLog: View Insights"
+      },
+      {
+        "command": "devlog.syncNow",
+        "title": "DevLog: Sync Now"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "devlog-sidebar",
+          "title": "DevLog Hub",
+          "icon": "resources/devlog-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "devlog-sidebar": [
+        {
+          "type": "webview",
+          "id": "devlog.sidebarView",
+          "name": "DevLog Hub"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "DevLog Hub",
+      "properties": {
+        "devlog.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:3001",
+          "description": "URL of the DevLog Hub server"
+        },
+        "devlog.wsUrl": {
+          "type": "string",
+          "default": "ws://localhost:3001",
+          "description": "WebSocket URL of the DevLog Hub server"
+        },
+        "devlog.autoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically connect to server on startup"
+        },
+        "devlog.syncInterval": {
+          "type": "number",
+          "default": 30000,
+          "description": "Sync interval in milliseconds"
+        },
+        "devlog.agentId": {
+          "type": "string",
+          "default": "",
+          "description": "Agent ID for this VS Code instance"
+        },
+        "devlog.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for authentication"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.5.10",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  },
+  "dependencies": {
+    "ws": "^8.14.0"
+  }
+}

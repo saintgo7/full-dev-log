@@ -1,0 +1,154 @@
+# DevLog Hub - Staging Deployment Pipeline
+# Triggers on push to develop branch
+# Builds Docker images and pushes to GitHub Container Registry
+
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - develop
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/devlog-hub
+
+jobs:
+  # Build and push Docker images
+  build-images:
+    name: Build ${{ matrix.service }} Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [server, web, agent]
+    outputs:
+      server-digest: ${{ steps.digest.outputs.server }}
+      web-digest: ${{ steps.digest.outputs.web }}
+      agent-digest: ${{ steps.digest.outputs.agent }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=
+            type=raw,value=staging
+
+      - name: Build and push image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          build-args: |
+            NODE_ENV=staging
+            GIT_SHA=${{ github.sha }}
+
+      - name: Output image digest
+        id: digest
+        env:
+          SERVICE: ${{ matrix.service }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: echo "${SERVICE}=${DIGEST}" >> $GITHUB_OUTPUT
+
+  # Deploy to staging environment
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build-images
+    environment:
+      name: staging
+      url: https://staging.devlog-hub.example.com
+    env:
+      SERVER_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-server:staging
+      WEB_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-web:staging
+      AGENT_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-agent:staging
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          echo "Placeholder: Configure kubectl with staging cluster credentials"
+          # In production, use:
+          # - aws eks update-kubeconfig (AWS EKS)
+          # - doctl kubernetes cluster kubeconfig (DigitalOcean)
+          # - gcloud container clusters get-credentials (GKE)
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          echo "Server image: ${SERVER_IMAGE}"
+          echo "Web image: ${WEB_IMAGE}"
+          echo "Agent image: ${AGENT_IMAGE}"
+          echo ""
+          echo "Placeholder: Apply Kubernetes manifests or run deployment scripts"
+          # Example commands:
+          # kubectl set image deployment/server server=${SERVER_IMAGE}
+          # kubectl set image deployment/web web=${WEB_IMAGE}
+          # kubectl rollout status deployment/server
+          # kubectl rollout status deployment/web
+
+      - name: Run smoke tests
+        run: |
+          echo "Placeholder: Run smoke tests against staging environment"
+          # Example: curl -f https://staging.devlog-hub.example.com/health
+
+      - name: Notify deployment
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          COMMIT_SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "Placeholder: Send notification to Slack/Discord/Teams"
+          # Use webhook to notify team of deployment status
+          echo "Deployment status: ${JOB_STATUS}"
+          echo "Commit: ${COMMIT_SHA}"
+          echo "Author: ${ACTOR}"
+
+  # Run integration tests on staging
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run integration tests
+        run: |
+          echo "Placeholder: Run integration tests against staging"
+          # npm run test:integration -- --baseUrl=https://staging.devlog-hub.example.com
+
+      - name: Run E2E tests
+        run: |
+          echo "Placeholder: Run E2E tests with Playwright/Cypress"
+          # npx playwright test --config=playwright.staging.config.ts

@@ -1,0 +1,48 @@
+# DevLog Hub - Code Owners
+# These owners will be requested for review when someone opens a pull request
+# that modifies code that they own.
+#
+# Order matters: later patterns take precedence over earlier ones.
+
+# Default owner for everything in the repo
+*                       @saintgo7
+
+# Server (Node.js API)
+/server/                @saintgo7
+/server/src/            @saintgo7
+/server/prisma/         @saintgo7
+
+# Web (Next.js Dashboard)
+/web/                   @saintgo7
+/web/src/               @saintgo7
+/web/src/components/    @saintgo7
+/web/src/app/           @saintgo7
+
+# Agent (Go)
+/agent/                 @saintgo7
+/agent/cmd/             @saintgo7
+/agent/internal/        @saintgo7
+
+# Infrastructure and DevOps
+/.github/               @saintgo7
+/.github/workflows/     @saintgo7
+/docker-compose*.yml    @saintgo7
+**/Dockerfile           @saintgo7
+
+# Scripts
+/scripts/               @saintgo7
+
+# Documentation
+/docs/                  @saintgo7
+*.md                    @saintgo7
+
+# Configuration files
+*.json                  @saintgo7
+*.yaml                  @saintgo7
+*.yml                   @saintgo7
+*.toml                  @saintgo7
+
+# Security-sensitive files (require owner review)
+.env*                   @saintgo7
+**/config*.yaml         @saintgo7
+**/secrets*             @saintgo7

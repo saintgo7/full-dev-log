@@ -69,14 +69,18 @@ export async function agentAuthMiddleware(
       throw new AuthenticationError('Invalid API token');
     }
 
-    if (agent.status !== 'active') {
-      throw new AuthenticationError('Agent is not active');
+    // Only block revoked agents - inactive agents can reconnect
+    if (agent.status === 'revoked') {
+      throw new AuthenticationError('Agent has been revoked');
     }
 
-    // Update last active timestamp
+    // Update last active timestamp and reactivate if inactive
     await prisma.agent.update({
       where: { id: agent.id },
-      data: { lastActiveAt: new Date() },
+      data: {
+        lastActiveAt: new Date(),
+        status: 'active',
+      },
     });
 
     req.agent = agent;

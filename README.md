@@ -1,5 +1,9 @@
 # DevLog Hub
 
+[![CI](https://github.com/saintgo7/full-dev-log/actions/workflows/ci.yml/badge.svg)](https://github.com/saintgo7/full-dev-log/actions/workflows/ci.yml)
+[![Deploy Staging](https://github.com/saintgo7/full-dev-log/actions/workflows/deploy-staging.yml/badge.svg)](https://github.com/saintgo7/full-dev-log/actions/workflows/deploy-staging.yml)
+[![Deploy Production](https://github.com/saintgo7/full-dev-log/actions/workflows/deploy-production.yml/badge.svg)](https://github.com/saintgo7/full-dev-log/actions/workflows/deploy-production.yml)
+
 개발 활동을 자동으로 수집하고 중앙에서 관리하는 플랫폼입니다.
 
 ## Architecture

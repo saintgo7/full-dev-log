@@ -3,7 +3,8 @@
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LogOut, User } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications';
+import { LogOut } from 'lucide-react';
 
 interface HeaderProps {
   title?: string;
@@ -21,10 +22,11 @@ export function Header({ title }: HeaderProps) {
     <header className="h-16 border-b bg-card px-6 flex items-center justify-between">
       <h1 className="text-xl font-semibold">{title}</h1>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
         {user && (
           <>
-            <div className="flex items-center gap-2">
+            <NotificationBell />
+            <div className="flex items-center gap-2 ml-2">
               <Avatar className="w-8 h-8">
                 <AvatarFallback>
                   {user.name.charAt(0).toUpperCase()}

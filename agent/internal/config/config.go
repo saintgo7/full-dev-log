@@ -47,7 +47,10 @@ type FileCollectorConfig struct {
 }
 
 type TerminalCollectorConfig struct {
-	Enabled bool `yaml:"enabled"`
+	Enabled        bool          `yaml:"enabled"`
+	HistoryFiles   []string      `yaml:"history_files"`
+	FilterPatterns []string      `yaml:"filter_patterns"`
+	PollInterval   time.Duration `yaml:"poll_interval"`
 }
 
 type StorageConfig struct {
@@ -92,6 +95,23 @@ func DefaultConfig() *Config {
 			},
 			Terminal: TerminalCollectorConfig{
 				Enabled: false,
+				HistoryFiles: []string{
+					filepath.Join(homeDir, ".bash_history"),
+					filepath.Join(homeDir, ".zsh_history"),
+				},
+				FilterPatterns: []string{
+					"password",
+					"token",
+					"secret",
+					"key",
+					"auth",
+					"passwd",
+					"credential",
+					"api_key",
+					"apikey",
+					"private",
+				},
+				PollInterval: 10 * time.Second,
 			},
 		},
 		Storage: StorageConfig{

@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 import * as eventService from '../services/event.service.js';
+import { socketManager } from '../websocket/socketManager.js';
 import type { AuthRequest, AgentRequest } from '../types/index.js';
 import type { CreateEventBatchInput, EventFiltersInput } from '../schemas/event.schema.js';
 
@@ -15,6 +16,36 @@ export async function createEventBatch(
       req.agent!.userId,
       events
     );
+
+    // Broadcast new events via WebSocket
+    if (result.created && result.created.length > 0) {
+      result.created.forEach(event => {
+        socketManager.broadcastNewEvent({
+          ...event,
+          agent: {
+            id: req.agent!.id,
+            name: req.agent!.name,
+            userId: req.agent!.userId
+          }
+        });
+      });
+
+      // Broadcast agent status update (agent is now active due to sync)
+      socketManager.broadcastAgentStatus(
+        req.agent!.id,
+        'active',
+        req.agent!.userId
+      );
+
+      // Send notification about new events
+      socketManager.broadcastNotification(req.agent!.userId, {
+        type: 'info',
+        title: 'Events Synced',
+        message: `${result.processed} new event(s) synced from ${req.agent!.name}`,
+        timestamp: new Date(),
+      });
+    }
+
     res.status(201).json({ success: true, data: result });
   } catch (error) {
     next(error);
@@ -82,6 +113,40 @@ export async function searchEvents(
       parseInt(limit as string) || 50
     );
     res.json({ success: true, data: events });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get terminal events for the authenticated user
+ */
+export async function getTerminalEvents(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const filters = req.query as unknown as EventFiltersInput;
+    const result = await eventService.getTerminalEvents(req.user!.userId, filters);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get terminal statistics for the authenticated user
+ */
+export async function getTerminalStats(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const days = parseInt(req.query.days as string) || 7;
+    const stats = await eventService.getTerminalStats(req.user!.userId, days);
+    res.json({ success: true, data: stats });
   } catch (error) {
     next(error);
   }

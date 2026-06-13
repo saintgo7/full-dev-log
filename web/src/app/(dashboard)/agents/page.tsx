@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { AgentStatusMonitor } from '@/components/realtime/AgentStatusMonitor';
 import { useAgents, useCreateAgent, useRegenerateToken, useDeleteAgent } from '@/hooks/useAgents';
 
 export default function AgentsPage() {
@@ -65,6 +66,14 @@ export default function AgentsPage() {
             에이전트 추가
           </Button>
         </div>
+
+        {/* Realtime Agent Status Monitor */}
+        {agents && agents.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">실시간 에이전트 상태</h2>
+            <AgentStatusMonitor agents={agents} />
+          </div>
+        )}
 
         {/* Create Form */}
         {showCreateForm && (

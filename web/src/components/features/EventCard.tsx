@@ -47,13 +47,15 @@ function EventCard({ event, onSelect, isSelected = false, className }: EventCard
       onClick={handleClick}
     >
       <div className="flex items-start gap-3">
+        {/* Event type icon with DOC-5 Design System colors
+            git: orange, file: violet, terminal: green, manual: blue */}
         <div
           className={cn(
             'p-2 rounded-lg',
-            event.eventType === 'git' && 'bg-event-git/10 text-event-git',
-            event.eventType === 'file' && 'bg-event-file/10 text-event-file',
-            event.eventType === 'terminal' && 'bg-event-terminal/10 text-event-terminal',
-            event.eventType === 'manual' && 'bg-event-manual/10 text-event-manual'
+            event.eventType === 'git' && 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+            event.eventType === 'file' && 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+            event.eventType === 'terminal' && 'bg-green-500/10 text-green-600 dark:text-green-400',
+            event.eventType === 'manual' && 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
           )}
         >
           <Icon className="w-4 h-4" />

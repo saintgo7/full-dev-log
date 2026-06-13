@@ -10,7 +10,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/saintgo7/devlog-hub/agent/internal/config"
-	"github.com/saintgo7/devlog-hub/agent/internal/models"
 	"github.com/saintgo7/devlog-hub/agent/internal/storage"
 )
 
