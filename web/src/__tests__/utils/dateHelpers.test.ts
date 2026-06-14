@@ -212,7 +212,9 @@ describe('Date Helper Functions', () => {
     });
 
     it('should handle far future dates', () => {
-      const futureDate = new Date('2099-12-31T23:59:59Z');
+      // Use a mid-year, midday UTC instant so no local timezone offset can
+      // roll the calendar year over (formatDate renders in the runner's TZ).
+      const futureDate = new Date('2099-06-15T12:00:00Z');
       const formatted = formatDate(futureDate);
 
       expect(formatted).toBeTruthy();
