@@ -162,7 +162,7 @@ export const handlers = [
     return HttpResponse.json({ ...notification, read: true });
   }),
 
-  http.put(`${API_URL}/notifications/read-all`, async () => {
+  http.post(`${API_URL}/notifications/read-all`, async () => {
     return HttpResponse.json({ success: true });
   }),
 
