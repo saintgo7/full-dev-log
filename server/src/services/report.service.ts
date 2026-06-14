@@ -485,10 +485,24 @@ function generateReportContent(
 }
 
 /**
+ * Escape HTML-special characters to prevent XSS in the HTML export
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
  * Convert markdown to HTML
  */
 function markdownToHtml(markdown: string, title: string): string {
-  let html = markdown
+  // Escape first so agent-collected content (commit messages, file paths,
+  // terminal commands) can't inject markup; markdown syntax markers survive.
+  let html = escapeHtml(markdown)
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
     .replace(/^# (.*$)/gim, '<h1>$1</h1>')
@@ -516,7 +530,7 @@ function markdownToHtml(markdown: string, title: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
+  <title>${escapeHtml(title)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #333; }
     h1 { color: #1a1a1a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; }

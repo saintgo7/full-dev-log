@@ -158,10 +158,15 @@ func (s *Syncer) sync() {
 			Int("failed", resp.Data.Failed).
 			Msg("Events synced successfully")
 	} else {
-		log.Error().
-			Str("code", resp.Error.Code).
-			Str("message", resp.Error.Message).
-			Msg("Server rejected events")
+		event := log.Error()
+		if resp.Error != nil {
+			event = event.
+				Str("code", resp.Error.Code).
+				Str("message", resp.Error.Message)
+		} else {
+			event = event.Str("message", "no error detail provided")
+		}
+		event.Msg("Server rejected events")
 		s.storage.MarkFailed(ids)
 	}
 }
