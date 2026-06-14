@@ -294,7 +294,7 @@ describe('VirtualList', () => {
   });
 
   it('should handle empty items array gracefully', () => {
-    const { container } = render(
+    render(
       <VirtualList
         items={[]}
         itemHeight={50}
@@ -302,6 +302,8 @@ describe('VirtualList', () => {
       />
     );
 
-    expect(container.querySelector('.overflow-auto')).toBeInTheDocument();
+    // With no items (and not loading) the component renders its empty state,
+    // not the scroll container.
+    expect(screen.getByText('No items to display')).toBeInTheDocument();
   });
 });
