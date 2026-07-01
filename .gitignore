@@ -51,3 +51,6 @@ temp/
 
 # OS files
 Thumbs.db
+
+# graphify tool output
+graphify-out/
