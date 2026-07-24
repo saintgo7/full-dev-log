@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { prisma, Prisma } from '../lib/prisma.js';
 import { generateApiToken } from '../utils/jwt.js';
 import { NotFoundError } from '../utils/errors.js';
