@@ -1,0 +1,76 @@
+# ============================================
+# DevLog Hub - Go Agent .dockerignore
+# Exclude unnecessary files from Docker build
+# ============================================
+
+# Binary outputs
+devlog-agent
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*.test
+
+# Go build cache
+.cache
+
+# Vendor (if not used)
+# vendor/
+
+# Development files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs
+README*
+CHANGELOG*
+LICENSE*
+
+# Tests
+*_test.go
+testdata
+coverage.out
+coverage.html
+
+# Docker
+Dockerfile*
+docker-compose*
+.docker
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# Local data
+data
+*.db
+*.sqlite
+
+# Config examples
+config.example.yaml
+config.sample.yaml

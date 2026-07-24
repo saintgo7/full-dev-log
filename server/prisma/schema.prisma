@@ -1,0 +1,467 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  role         UserRole @default(member)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  agents                  Agent[]
+  events                  Event[]
+  notes                   Note[]
+  reports                 Report[]
+  reportSchedules         ReportSchedule[]
+  projectMembers          ProjectMember[]
+  sessions                Session[]
+  ownedTeams              Team[]                   @relation("TeamOwner")
+  teamMembers             TeamMember[]
+  teamActivities          TeamActivity[]
+  sharedNotes             SharedNote[]
+  noteComments            NoteComment[]
+  noteMentions            NoteMention[]
+  notifications           Notification[]
+  notificationPreferences NotificationPreference?
+
+  @@map("users")
+}
+
+enum UserRole {
+  admin
+  member
+  viewer
+}
+
+// Agent model (local collectors)
+model Agent {
+  id           String      @id @default(uuid())
+  userId       String      @map("user_id")
+  name         String
+  machineId    String      @unique @map("machine_id")
+  os           String
+  apiToken     String      @unique @map("api_token")
+  status       AgentStatus @default(active)
+  lastSyncAt   DateTime?   @map("last_sync_at")
+  lastActiveAt DateTime?   @map("last_active_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events Event[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("agents")
+}
+
+enum AgentStatus {
+  active
+  inactive
+  revoked
+}
+
+// Project model
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  repoUrl     String?  @map("repo_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members         ProjectMember[]
+  events          Event[]
+  reports         Report[]
+  reportSchedules ReportSchedule[]
+  teamProjects    TeamProject[]
+
+  @@map("projects")
+}
+
+// Project membership
+model ProjectMember {
+  id        String      @id @default(uuid())
+  projectId String      @map("project_id")
+  userId    String      @map("user_id")
+  role      ProjectRole @default(member)
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+enum ProjectRole {
+  owner
+  member
+  viewer
+}
+
+// Event model (core data)
+model Event {
+  id              String    @id @default(uuid())
+  agentId         String    @map("agent_id")
+  projectId       String?   @map("project_id")
+  userId          String    @map("user_id")
+  eventType       EventType @map("event_type")
+  eventAction     String    @map("event_action")
+  title           String?
+  content         String?
+  metadata        Json      @default("{}")
+  filePath        String?   @map("file_path")
+  gitBranch       String?   @map("git_branch")
+  gitCommitHash   String?   @map("git_commit_hash")
+  localTimestamp  DateTime  @map("local_timestamp")
+  serverTimestamp DateTime  @default(now()) @map("server_timestamp")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  agent   Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Single column indexes for FK lookups
+  @@index([userId])
+  @@index([agentId])
+  @@index([projectId])
+  @@index([eventType])
+
+  // Composite indexes for common query patterns (M13-T1 optimization)
+  @@index([userId, localTimestamp(sort: Desc)], name: "idx_events_user_timeline")
+  @@index([projectId, localTimestamp(sort: Desc)], name: "idx_events_project_timeline")
+  @@index([agentId, localTimestamp(sort: Desc)], name: "idx_events_agent_activity")
+  @@index([eventType, localTimestamp(sort: Desc)], name: "idx_events_type_timeline")
+  @@index([userId, eventType, localTimestamp(sort: Desc)], name: "idx_events_user_type_timeline")
+  @@index([userId, projectId, localTimestamp(sort: Desc)], name: "idx_events_user_project_timeline")
+  @@index([userId, eventType, projectId, localTimestamp(sort: Desc)], name: "idx_events_comprehensive")
+
+  @@map("events")
+}
+
+/// Event types for categorizing different kinds of development activities
+/// - git: Git operations (commit, push, pull, branch, merge, etc.)
+/// - file: File system changes (create, modify, delete, rename)
+/// - terminal: Terminal/shell commands executed by the user
+///   Metadata may include: shell (bash/zsh), exitCode, cwd, duration
+/// - manual: Manually logged events or notes
+enum EventType {
+  git
+  file
+  terminal
+  manual
+}
+
+// Manual notes
+model Note {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String
+  content   String
+  tags      String[] @default([])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Indexes (M13-T1 optimization)
+  @@index([userId])
+  @@index([userId, createdAt(sort: Desc)], name: "idx_notes_user_timeline")
+  @@index([userId, updatedAt(sort: Desc)], name: "idx_notes_user_updated")
+
+  @@map("notes")
+}
+
+// Reports - Stores generated activity reports with full JSON data
+model Report {
+  id         String       @id @default(uuid())
+  userId     String       @map("user_id")
+  projectId  String?      @map("project_id")
+  reportType ReportType   @map("report_type")
+  title      String
+  startDate  DateTime     @map("start_date")
+  endDate    DateTime     @map("end_date")
+  data       Json         @default("{}") // Full ReportTemplate JSON
+  status     ReportStatus @default(generated)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  // Single column indexes
+  @@index([userId])
+  @@index([projectId])
+  @@index([reportType])
+
+  // Composite indexes for common query patterns (M13-T1 optimization)
+  @@index([userId, createdAt(sort: Desc)], name: "idx_reports_user_timeline")
+  @@index([userId, reportType, createdAt(sort: Desc)], name: "idx_reports_user_type_timeline")
+  @@index([userId, projectId, createdAt(sort: Desc)], name: "idx_reports_user_project_timeline")
+  @@index([userId, status, createdAt(sort: Desc)], name: "idx_reports_user_status")
+
+  @@map("reports")
+}
+
+enum ReportType {
+  daily
+  weekly
+  monthly
+  custom
+}
+
+enum ReportStatus {
+  generating
+  generated
+  failed
+}
+
+// Report Schedules - Automated report generation schedules
+model ReportSchedule {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  reportType String   @map("report_type") // daily, weekly, monthly
+  projectId  String?  @map("project_id")
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, reportType, projectId])
+  @@index([userId])
+  @@map("report_schedules")
+}
+
+// User sessions (for JWT refresh tokens)
+model Session {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  refreshToken String   @unique @map("refresh_token")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// Team model - Workspace for organizing projects and members
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  avatarUrl   String?  @map("avatar_url")
+  ownerId     String   @map("owner_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  owner        User             @relation("TeamOwner", fields: [ownerId], references: [id])
+  members      TeamMember[]
+  projects     TeamProject[]
+  invitations  TeamInvitation[]
+  activities   TeamActivity[]
+  sharedNotes  SharedNote[]
+  integrations Integration[]
+
+  @@index([ownerId])
+  @@map("teams")
+}
+
+// Team membership
+model TeamMember {
+  id       String   @id @default(uuid())
+  teamId   String   @map("team_id")
+  userId   String   @map("user_id")
+  role     TeamRole @default(member)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+enum TeamRole {
+  owner
+  admin
+  member
+}
+
+// Team project association
+model TeamProject {
+  id        String   @id @default(uuid())
+  teamId    String   @map("team_id")
+  projectId String   @map("project_id")
+  addedAt   DateTime @default(now()) @map("added_at")
+  addedBy   String   @map("added_by")
+
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@unique([teamId, projectId])
+  @@index([teamId])
+  @@index([projectId])
+  @@map("team_projects")
+}
+
+// Team invitations
+model TeamInvitation {
+  id        String   @id @default(uuid())
+  teamId    String   @map("team_id")
+  email     String
+  role      TeamRole @default(member)
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  invitedBy String   @map("invited_by")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([token])
+  @@index([email])
+  @@map("team_invitations")
+}
+
+// Team activity feed - tracks all team events
+model TeamActivity {
+  id        String   @id @default(uuid())
+  teamId    String   @map("team_id")
+  userId    String   @map("user_id")
+  type      String   // member_joined, member_left, project_added, note_shared, milestone_reached
+  data      Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([teamId, createdAt])
+  @@map("team_activities")
+}
+
+// Shared notes for teams
+model SharedNote {
+  id        String   @id @default(uuid())
+  teamId    String   @map("team_id")
+  authorId  String   @map("author_id")
+  title     String
+  content   String
+  projectId String?  @map("project_id")
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  team     Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  author   User          @relation(fields: [authorId], references: [id])
+  comments NoteComment[]
+  mentions NoteMention[]
+
+  @@index([teamId])
+  @@index([authorId])
+  @@map("shared_notes")
+}
+
+// Comments on shared notes
+model NoteComment {
+  id        String   @id @default(uuid())
+  noteId    String   @map("note_id")
+  authorId  String   @map("author_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  note   SharedNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  author User       @relation(fields: [authorId], references: [id])
+
+  @@index([noteId])
+  @@map("note_comments")
+}
+
+// Mentions in shared notes (@username)
+model NoteMention {
+  id        String   @id @default(uuid())
+  noteId    String   @map("note_id")
+  userId    String   @map("user_id")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  note SharedNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id])
+
+  @@index([noteId])
+  @@index([userId, read])
+  @@map("note_mentions")
+}
+
+// External integrations (Slack, Discord webhooks)
+model Integration {
+  id         String   @id @default(uuid())
+  teamId     String   @map("team_id")
+  type       String   // slack, discord
+  webhookUrl String   @map("webhook_url")
+  name       String   // Display name for the integration
+  enabled    Boolean  @default(true)
+  events     String[] // events to notify: member_joined, note_created, report_ready, etc.
+  createdAt  DateTime @default(now()) @map("created_at")
+  createdBy  String   @map("created_by")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([enabled])
+  @@map("integrations")
+}
+
+// Notification model - Stores user notifications
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String   // report_ready, team_invite, mention, anomaly_detected, milestone_reached
+  title     String
+  message   String
+  data      Json     @default("{}")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, createdAt])
+  @@map("notifications")
+}
+
+// Notification preferences - Per-user notification settings
+model NotificationPreference {
+  id           String  @id @default(uuid())
+  userId       String  @unique @map("user_id")
+  emailEnabled Boolean @default(true) @map("email_enabled")
+  pushEnabled  Boolean @default(true) @map("push_enabled")
+  inAppEnabled Boolean @default(true) @map("in_app_enabled")
+
+  // Notification type preferences
+  reportReady  Boolean @default(true) @map("report_ready")
+  teamInvite   Boolean @default(true) @map("team_invite")
+  mentions     Boolean @default(true)
+  anomalies    Boolean @default(true)
+  weeklyDigest Boolean @default(true) @map("weekly_digest")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}

@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "^(시작|start|resume|재시작|개발|dev).*$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/dev-resume.sh 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}

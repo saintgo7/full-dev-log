@@ -1,0 +1,50 @@
+# DevLog Agent Configuration
+
+server:
+  url: http://localhost:3001
+  api_token: YOUR_API_TOKEN_HERE
+
+agent:
+  name: my-laptop
+  machine_id: ""  # Auto-generated if empty
+  watch_dirs:
+    - ~/Projects
+    - ~/Code
+
+collectors:
+  git:
+    enabled: true
+    poll_interval: 30s
+  file:
+    enabled: true
+    extensions:
+      - .go
+      - .ts
+      - .tsx
+      - .js
+      - .jsx
+      - .py
+      - .rs
+      - .java
+      - .md
+    ignore_dirs:
+      - node_modules
+      - .git
+      - vendor
+      - dist
+      - build
+      - __pycache__
+  terminal:
+    enabled: false
+
+storage:
+  db_path: ~/.devlog-agent/events.db
+
+sync:
+  interval: 5m
+  batch_size: 100
+  max_retries: 3
+
+logging:
+  level: info
+  format: console
